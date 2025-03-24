@@ -31,7 +31,7 @@ If it's not installed, follow [Ollama's installation guide](https://ollama.com).
 
 ### 4️⃣ Run the Application
 ```bash
-streamlit run flashcard_app.py
+streamlit run GUIapp.py
 ```
 
 ## 🛠 Usage
