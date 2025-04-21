@@ -1,28 +1,20 @@
-import spacy
 import re
 import json
-from tqdm import tqdm
 from typing import List, Dict, Set
-
-# Load spaCy model (using the small model for Vercel compatibility)
-nlp = spacy.load("en_core_web_sm")
 
 class FlashcardGenerator:
     def __init__(self):
-        self.min_answer_length = 2  # Minimum words in answer
-        self.max_answer_length = 7  # Maximum words in answer
-        self.max_flashcards = 100   # Maximum flashcards to return
-        print("📌 Flashcard Generator initialized (spaCy only)")
+        self.min_answer_length = 2
+        self.max_answer_length = 7
+        self.max_flashcards = 100
+        print("📌 Flashcard Generator initialized (lightweight mode)")
 
     def chunk_text(self, text: str, max_chunk_size: int = 500) -> List[str]:
-        """Split text into semantically coherent chunks using sentence boundaries."""
-        doc = nlp(text)
-        sentences = [sent.text.strip() for sent in doc.sents if len(sent.text.strip()) > 10]
-        
+        sentences = re.split(r'(?<=[.!?])\s+', text)
         chunks = []
         current_chunk = []
         current_length = 0
-        
+
         for sent in sentences:
             sent_length = len(sent.split())
             if current_length + sent_length > max_chunk_size and current_chunk:
@@ -32,62 +24,43 @@ class FlashcardGenerator:
             else:
                 current_chunk.append(sent)
                 current_length += sent_length
-                
+
         if current_chunk:
             chunks.append(" ".join(current_chunk))
-            
+
         return chunks
 
     def generate_flashcards(self, text_chunk: str) -> List[Dict[str, str]]:
-        """Generate multiple question types using spaCy's analysis."""
-        doc = nlp(text_chunk)
         flashcards = []
-        
-        # 1. Named Entity Recognition (NER) cards
-        for ent in doc.ents:
-            if (self.min_answer_length <= len(ent.text.split()) <= self.max_answer_length
-               and ent.label_ in ["PERSON", "ORG", "GPE", "DATE", "EVENT"]):
-                flashcards.append({
-                    "question": f"Who/what is '{ent.text}' in this context?",
-                    "answer": f"{ent.label_}: {ent.text} (from: {ent.sent.text[:100]}...)"
-                })
-        
-        # 2. Noun chunk cards (concepts)
-        for chunk in doc.noun_chunks:
-            if (chunk.root.pos_ == "NOUN" 
-                and len(chunk.text.split()) >= 2
-                and not any(t.is_stop for t in chunk)):
-                flashcards.append({
-                    "question": f"Explain the concept: '{chunk.text}'",
-                    "answer": f"Related to: {chunk.root.lemma_}. Context: {chunk.sent.text[:150]}"
-                })
-        
-        # 3. Action/verb cards
-        for token in doc:
-            if (token.pos_ == "VERB" 
-                and not token.is_stop
-                and token.lemma_ not in ["be", "have", "do"]):
-                flashcards.append({
-                    "question": f"What does the action '{token.text}' mean here?",
-                    "answer": f"Verb: {token.lemma_}. Context: {token.sent.text[:100]}..."
-                })
-                
+        seen = set()
+        sentences = re.split(r'(?<=[.!?])\s+', text_chunk)
+
+        for sent in sentences:
+            match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b', sent)
+            if match:
+                answer = match.group(1)
+                question = sent.replace(answer, "______")
+                if len(answer.split()) <= self.max_answer_length and len(question.split()) > 3:
+                    question_key = question.lower().strip()
+                    if question_key not in seen:
+                        flashcards.append({"question": question.strip(), "answer": answer.strip()})
+                        seen.add(question_key)
+
         return flashcards
 
     def process_text(self, text: str) -> List[Dict[str, str]]:
-        """Process full text with duplicate prevention."""
         chunks = self.chunk_text(text)
         all_flashcards: List[Dict[str, str]] = []
         seen_questions: Set[str] = set()
-        
+
         print(f"🔄 Processing {len(chunks)} text chunks...")
-        for chunk in tqdm(chunks, desc="Generating Flashcards"):
+        for chunk in chunks:
             for card in self.generate_flashcards(chunk):
                 question_hash = hash(card["question"].lower().strip())
                 if question_hash not in seen_questions:
                     seen_questions.add(question_hash)
                     all_flashcards.append(card)
-                    
+
         return sorted(all_flashcards, key=lambda x: len(x["question"]))[:self.max_flashcards]
 
 def main():
