@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "GUIapp.py",    
+      "src": "GUIapp.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "GUIapp.py"   
+      "dest": "GUIapp.py"
     }
   ]
 }

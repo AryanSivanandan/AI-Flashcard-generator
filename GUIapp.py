@@ -1,38 +1,23 @@
+import openai
 import streamlit as st
 import json
-import re
+import os
+from app import generate_flashcards_with_openai  # Import the flashcard generation logic from app.py
 
-# ✅ Lightweight Flashcard Generator (no spaCy)
-def generate_flashcards_lightweight(text):
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    flashcards = []
-    seen = set()
+# Set your OpenAI API key from the environment variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    for sent in sentences:
-        # Basic proper noun / key term detection (capitalized words)
-        match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b', sent)
-        if match:
-            answer = match.group(1)
-            question = sent.replace(answer, "______")
-            if len(answer.split()) <= 5 and len(question.split()) > 3:
-                question_key = question.lower().strip()
-                if question_key not in seen:
-                    flashcards.append({"question": question.strip(), "answer": answer.strip()})
-                    seen.add(question_key)
-
-    return flashcards
-
-# Streamlit UI
-st.title("📚 Flashcard Generator (Lightweight)")
-st.write("Generate flashcards without large NLP models")
+# Streamlit UI for Flashcard Generator
+st.title("📚 Flashcard Generator")
+st.write("Generate flashcards based on your text")
 
 text_input = st.text_area("Paste your text here:", height=200)
 
 if st.button("Generate Flashcards"):
     if not text_input.strip():
-        st.warning("Please enter some text")
+        st.warning("Please enter some text.")
     else:
-        flashcards = generate_flashcards_lightweight(text_input)
+        flashcards = generate_flashcards_with_openai(text_input)
 
         if flashcards:
             st.success(f"Generated {len(flashcards)} flashcards")
