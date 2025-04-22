@@ -5,7 +5,7 @@ import os
 from app import generate_flashcards_with_openai  # Import the flashcard generation logic from app.py
 
 # Set your OpenAI API key from the environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv(api_key = st.secrets["OPENAI_API_KEY"])
 
 # Streamlit UI for Flashcard Generator
 st.title("📚 Flashcard Generator")
