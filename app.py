@@ -1,11 +1,8 @@
 import os
 from openai import OpenAI
 
-
-load_dotenv()
-
 # Initialize client once (better for performance)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_flashcards_with_openai(text: str) -> list[dict]:
     """
